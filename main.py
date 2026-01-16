@@ -1,3 +1,5 @@
+"""Точка входа в приложение."""
+
 import asyncio
 import sys
 from contextlib import suppress
@@ -48,35 +50,36 @@ async def main() -> None:
         logger.error(f"❌ Ошибка инициализации БД: {e}")
         sys.exit(1)
 
-    # 4. Проверка и применение миграций
-    logger.info("🔄 Проверка миграций Alembic...")
+    # # 4. Проверка и применение миграций
+    # logger.info("🔄 Проверка миграций Alembic...")
+    # try:
+    #     from alembic.config import Config as AlembicConfig
+    #     from alembic import command
+    #
+    #     alembic_cfg = AlembicConfig("alembic.ini")
+    #     command.upgrade(alembic_cfg, "head")
+    #     logger.info("✅ Миграции применены")
+    # except ImportError as e:
+    #     logger.warning(f"⚠️ Alembic не установлен: {e}")
+    #     logger.info("💡 Установи: pip install alembic")
+    #
+    #
+    # logger.info("✅ Инициализация завершена!")
+
+    # 5. Запуск бота
+    from app.bot import start_bot
+
     try:
-        from alembic import command  # type: ignore
-        from alembic.config import Config as AlembicConfig  # type: ignore
-
-        alembic_cfg = AlembicConfig("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-        logger.info("✅ Миграции применены")
+        await start_bot()
+    except KeyboardInterrupt:
+        logger.info("⏸️ Получен сигнал остановки")
     except Exception as e:
-        logger.warning(f"⚠️ Не удалось применить миграции: {e}")
-        logger.info("💡 Запусти вручную: alembic upgrade head")
-
-    # TODO: Следующие шаги:
-    # 5. Создание бота и диспетчера
-    # 6. Настройка Raito (роли)
-    # 7. Регистрация middlewares
-    # 8. Регистрация handlers
-    # 9. Запуск polling
-
-    logger.info("✅ Инициализация завершена!")
-    logger.info("🔄 Следующий шаг: создание bot модуля с Raito...")
-
-    # Временная заглушка
-    logger.info("⏸️ Бот готов к дальнейшей разработке")
-    await asyncio.sleep(1)
-
-    # Закрываем соединения
-    await close_db()
+        logger.error(f"❌ Критическая ошибка: {e}", exc_info=True)
+        sys.exit(1)
+    finally:
+        # Закрываем соединения при завершении
+        await close_db()
+        logger.info("👋 Все соединения закрыты")
 
 
 if __name__ == "__main__":
