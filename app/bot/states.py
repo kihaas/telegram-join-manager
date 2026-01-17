@@ -5,7 +5,6 @@ class BroadcastStates(StatesGroup):
     """Состояния для создания рассылки."""
 
     waiting_content = State()  # Ожидание текста/медиа
-    waiting_buttons = State()  # Ожидание кнопок
     preview = State()  # Предпросмотр
     confirm = State()  # Подтверждение отправки
 
@@ -14,7 +13,6 @@ class WelcomeStates(StatesGroup):
     """Состояния для редактирования приветствия."""
 
     waiting_content = State()  # Ожидание текста/медиа
-    waiting_buttons = State()  # Ожидание кнопок
     preview = State()  # Предпросмотр
 
 

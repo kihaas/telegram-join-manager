@@ -88,8 +88,24 @@ async def start_edit_welcome(callback: CallbackQuery, state: FSMContext) -> None
 async def process_welcome_content(message: Message, state: FSMContext) -> None:
     """Обработка нового приветствия."""
 
+    logger.info(f"[DEBUG] Получено сообщение: text='{message.text}', caption='{message.caption}'")
+    logger.info(f"[DEBUG] Есть фото: {bool(message.photo)}, есть видео: {bool(message.video)}")
+
     # Получаем текст и медиа
-    text = message.html_text or message.caption
+    text = message.text or message.caption
+    photo_id = None
+
+    if message.photo:
+        photo_id = message.photo[-1].file_id
+        logger.info(f"[DEBUG] Фото ID: {photo_id}")
+    elif message.video:
+        photo_id = message.video.file_id
+        logger.info(f"[DEBUG] Видео ID: {photo_id}")
+    else:
+        logger.info(f"[DEBUG] Медиа нет, photo_id = None")
+
+    # Получаем текст и медиа
+    text = message.text or message.caption or message.html_text
     photo_id = None
 
     if message.photo:
@@ -130,13 +146,28 @@ async def process_welcome_content(message: Message, state: FSMContext) -> None:
         buttons_json = json.dumps(buttons, ensure_ascii=False)
         markup = parse_buttons_from_text(text)
 
-    # Сохраняем в БД (полная замена, обнуляем всё)
+
+    # async for session in get_session():
+    #     await crud.update_admin_settings(
+    #         session,
+    #         settings_id=2,
+    #         applications=clean_text,
+    #         photo=photo_id,  # None если нет медиа
+    #         buttons=buttons_json
+    #     )
+
+    # Сохраняем в БД - полностью заменяем всё
     async for session in get_session():
+        # ЯВНО передаём photo=None если нет нового медиа
+        update_photo = photo_id  # Это будет None если нет медиа
+
+        logger.info(f"[DEBUG] Сохраняем: text='{clean_text}', photo={update_photo}")
+
         await crud.update_admin_settings(
             session,
             settings_id=2,
             applications=clean_text,
-            photo=photo_id,  # None если нет медиа
+            photo=update_photo,  # Важно: передаём None явно
             buttons=buttons_json
         )
 
@@ -165,3 +196,8 @@ async def process_welcome_content(message: Message, state: FSMContext) -> None:
         "🤖 <b>Панель управления</b>\n\nВыберите раздел:",
         reply_markup=get_admin_main_menu()
     )
+
+
+
+
+__all__ = ["router"]

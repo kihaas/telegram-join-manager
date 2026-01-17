@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 router = Router()
 
 
-@router.message(F.text.in_(["🏠 Главное меню", "⚙️ Настройки"]), DEVELOPER | OWNER | ADMINISTRATOR)
+@router.message(F.text.in_(["🏠 Главное меню"]), DEVELOPER | OWNER | ADMINISTRATOR)
 async def main_menu_button(message: Message, state: FSMContext) -> None:
     """Кнопка главного меню."""
     await state.clear()

@@ -5,11 +5,8 @@ from .inline import (
     get_broadcast_controls,
     get_broadcast_cancel,
     get_confirm_buttons,
-    get_add_buttons_keyboard,
     get_request_controls,
     get_requests_pagination,
-    get_requests_filters,
-    get_welcome_agree,
     parse_buttons_from_text,
 )
 
@@ -27,11 +24,8 @@ __all__ = [
     "get_broadcast_controls",
     "get_broadcast_cancel",
     "get_confirm_buttons",
-    "get_add_buttons_keyboard",
     "get_request_controls",
     "get_requests_pagination",
-    "get_requests_filters",
-    "get_welcome_agree",
     "parse_buttons_from_text",
     # Reply
     "get_admin_reply_menu",

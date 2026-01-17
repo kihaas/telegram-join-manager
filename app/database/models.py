@@ -1,16 +1,16 @@
+"""Все модели базы данных в одном файле."""
+
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Optional
 
 from sqlalchemy import String, Integer, Boolean, Text, DateTime, Enum, Index
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
+
+from .base import Base
 
 
-class Base(DeclarativeBase):
-    """Базовый класс для всех моделей."""
-    pass
-
-
+# ==================== USER ====================
 class User(Base):
     """Модель пользователя (совместима со старой БД applications.db)."""
 
@@ -25,6 +25,7 @@ class User(Base):
         return f"<User(id={self.id}, chat_id={self.chat_id}, username={self.username})>"
 
 
+# ==================== ADMIN SETTINGS ====================
 class AdminSettings(Base):
     """Настройки администратора (совместима со старой БД)."""
 
@@ -39,6 +40,7 @@ class AdminSettings(Base):
         return f"<AdminSettings(id={self.id}, applications={self.applications})>"
 
 
+# ==================== ЗАЯВКИ ====================
 class RequestStatus(PyEnum):
     """Статусы заявок на вступление."""
     PENDING = "pending"
@@ -75,84 +77,10 @@ class PendingRequest(Base):
         return f"<PendingRequest(id={self.id}, user_id={self.user_id}, status={self.status.value})>"
 
 
+# ==================== КАПЧА ====================
 class CaptchaType(PyEnum):
     """Типы капчи."""
-    EMOJI = "emoji"
-    IMAGE = "image"
-    MATH = "math"
-
-
-class CaptchaVariant(Base):
-    """Варианты капчи."""
-
-    __tablename__ = "captcha_variants"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    type: Mapped[CaptchaType] = mapped_column(Enum(CaptchaType), nullable=False, index=True)
-    content: Mapped[str] = mapped_column(String(255), nullable=False)  # Смайлик, file_id или выражение
-    is_correct: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    group_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # Для группировки вариантов
-
-    __table_args__ = (
-        Index('idx_type_group', 'type', 'group_id'),
-    )
-
-    def __repr__(self) -> str:
-        return f"<CaptchaVariant(id={self.id}, type={self.type.value}, content={self.content})>"
-
-
-class BroadcastStatus(PyEnum):
-    """Статусы рассылки."""
-    DRAFT = "draft"
-    SENDING = "sending"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-    FAILED = "failed"
-
-
-class BroadcastDraft(Base):
-    """Черновики и история рассылок."""
-
-    __tablename__ = "broadcast_drafts"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    media_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # file_id фото/видео/документа
-    buttons: Mapped[str] = mapped_column(Text, default='[]', nullable=False)  # JSON строка
-    creator_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[BroadcastStatus] = mapped_column(
-        Enum(BroadcastStatus),
-        default=BroadcastStatus.DRAFT,
-        nullable=False,
-        index=True
-    )
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    total_users: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    successful_sends: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    failed_sends: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-
-    def __repr__(self) -> str:
-        return f"<BroadcastDraft(id={self.id}, status={self.status.value}, creator_id={self.creator_id})>"
-
-
-class WelcomeVariant(Base):
-    """Варианты приветственных сообщений (для A/B тестирования)."""
-
-    __tablename__ = "welcome_variants"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    text: Mapped[str] = mapped_column(Text, nullable=False)
-    media_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    buttons: Mapped[str] = mapped_column(Text, default='[]', nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
-    weight: Mapped[int] = mapped_column(Integer, default=1, nullable=False)  # Вес для случайного выбора
-    views_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    agrees_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # Кликов на "Согласен"
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-
-    def __repr__(self) -> str:
-        return f"<WelcomeVariant(id={self.id}, is_active={self.is_active}, views={self.views_count})>"
+    EMOJI = "emoji"  # Только emoji капча
 
 
 class CaptchaAttempt(Base):

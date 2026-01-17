@@ -2,6 +2,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 
+
+
 def get_admin_main_menu() -> InlineKeyboardMarkup:
     """Главное меню админ-панели."""
     builder = InlineKeyboardBuilder()
@@ -28,9 +30,9 @@ def get_back_to_menu() -> InlineKeyboardMarkup:
 def get_settings_menu(auto_accept: bool, captcha_enabled: bool) -> InlineKeyboardMarkup:
     """Меню настроек."""
     builder = InlineKeyboardBuilder()
+    captcha_text = "При ответе, вы соглашаетесь на отправку вам сообщений :)"
 
     auto_accept_text = "✅ Автоприём ВКЛ" if auto_accept else "❌ Автоприём ВЫКЛ"
-    captcha_text = "✅ Капча ВКЛ" if captcha_enabled else "❌ Капча ВЫКЛ"
 
     builder.row(
         InlineKeyboardButton(text=auto_accept_text, callback_data="settings:toggle_auto_accept")

@@ -1,9 +1,9 @@
 """CRUD операции для всех моделей."""
 
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Union
 
-from sqlalchemy import select, update, delete, func, and_, or_
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
@@ -11,12 +11,8 @@ from .models import (
     AdminSettings,
     PendingRequest,
     RequestStatus,
-    CaptchaVariant,
     CaptchaType,
-    BroadcastDraft,
-    BroadcastStatus,
-    WelcomeVariant,
-    CaptchaAttempt,
+    CaptchaAttempt
 )
 
 
@@ -55,8 +51,6 @@ async def get_users_count(session: AsyncSession) -> int:
 
 async def get_new_users_count(session: AsyncSession, days: int = 1) -> int:
     """Количество новых пользователей за N дней."""
-    from datetime import datetime, timedelta
-
     # Вычисляем дату N дней назад
     cutoff_date = datetime.now() - timedelta(days=days)
 
@@ -88,26 +82,42 @@ async def get_admin_settings(session: AsyncSession, settings_id: int = 1) -> Opt
 async def update_admin_settings(
         session: AsyncSession,
         settings_id: int = 1,
-        applications: Optional[int] = None,
+        applications: Optional[Union[str, int]] = None,  # Изменил тип
         photo: Optional[str] = None,
         buttons: Optional[str] = None
 ) -> AdminSettings:
     """Обновить настройки админа."""
-    settings = await get_admin_settings(session, settings_id)
+    # Получаем текущие настройки
+    stmt = select(AdminSettings).where(AdminSettings.id == settings_id)
+    result = await session.execute(stmt)
+    settings = result.scalar_one_or_none()
 
     if settings is None:
         # Создаём, если не существует
         settings = AdminSettings(id=settings_id)
         session.add(settings)
 
-    if applications is not None:
+    # ВСЕГДА обновляем все переданные поля, даже если None
+    # Используем locals() чтобы определить, какие поля переданы
+    passed_args = locals()
+
+    if 'applications' in passed_args and passed_args['applications'] is not None:
         settings.applications = applications
-    if photo is not None:
+
+    # Ключевое изменение: обрабатываем photo отдельно
+    if 'photo' in passed_args:
+        # Если photo передано в аргументах (даже если None) - обновляем
         settings.photo = photo
-    elif photo == "":  # Явное обнуление
-        settings.photo = None
-    if buttons is not None:
+        print(f"[CRUD DEBUG] Устанавливаем photo = {photo}")  # Для отладки
+
+    if 'buttons' in passed_args and passed_args['buttons'] is not None:
         settings.buttons = buttons
+
+    # Явно помечаем как изменённый
+    from sqlalchemy import inspect
+    insp = inspect(settings)
+    if insp.modified:
+        print(f"[CRUD DEBUG] Изменённые поля: {insp.modified}")  # Для отладки
 
     await session.flush()
     return settings
@@ -140,9 +150,9 @@ async def get_pending_requests(
         status: Optional[RequestStatus] = None,
         limit: int = 10,
         offset: int = 0,
-        order_by: str = "desc"  # "asc" or "desc"
+        order_by: str = "desc"
 ) -> List[PendingRequest]:
-    """Получить список заявок с фильтрами и пагинацией.""" #исправить уброать фильтры
+    """Получить список заявок с пагинацией."""
     query = select(PendingRequest)
 
     if status:
@@ -204,45 +214,6 @@ async def bulk_update_requests(
     )
     result = await session.execute(stmt)
     return result.rowcount
-
-
-# ==================== CAPTCHA VARIANTS ====================
-
-
-async def get_random_captcha_variants(
-        session: AsyncSession,
-        captcha_type: CaptchaType,
-        count: int = 4
-) -> List[CaptchaVariant]:
-    """Получить случайные варианты капчи."""
-    result = await session.execute(
-        select(CaptchaVariant)
-        .where(CaptchaVariant.type == captcha_type)
-        .order_by(func.random())
-        .limit(count)
-    )
-    return list(result.scalars().all())
-
-
-# ==================== BROADCAST DRAFTS ====================
-
-
-async def update_broadcast_status(
-        session: AsyncSession,
-        draft_id: int,
-        status: BroadcastStatus,
-        **kwargs
-) -> Optional[BroadcastDraft]:
-    """Обновить статус рассылки."""
-    draft = await session.get(BroadcastDraft, draft_id)
-    if draft:
-        draft.status = status
-        for key, value in kwargs.items():
-            if hasattr(draft, key):
-                setattr(draft, key, value)
-        await session.flush()
-    return draft
-
 
 
 # ==================== CAPTCHA ATTEMPTS ====================

@@ -34,7 +34,6 @@ class Config(BaseSettings):
     )
 
     # === Features Toggles ===
-    captcha_enabled: bool = Field(default=True, description="Enable captcha verification")
     auto_accept_default: bool = Field(default=False, description="Auto-accept join requests by default")
     notify_on_new_request: bool = Field(default=False, description="Notify admins on new requests")
 

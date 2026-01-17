@@ -1,3 +1,5 @@
+"""Инициализация бота и диспетчера."""
+
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -11,12 +13,11 @@ from raito.plugins.roles.providers.sql.sqlite import SQLiteRoleProvider
 from raito.utils.storages.sql.sqlite import SQLiteStorage as RaitoSQLiteStorage
 
 from app.core import get_config, get_logger
-from app.bot.handlers import main_router
 from app.bot.middlewares import LoggingMiddleware, ThrottlingMiddleware
+from app.bot.handlers import main_router
+from app.bot.handlers.admin.commands.welcome import router as welcome_router
 
 logger = get_logger(__name__)
-
-RAITO_INSTANCE: Raito | None = None
 
 
 async def create_bot() -> Bot:
@@ -66,29 +67,41 @@ async def create_dispatcher() -> Dispatcher:
 
 
 async def setup_raito(bot: Bot, dp: Dispatcher) -> Raito:
+    """
+    Настройка Raito для управления ролями.
+
+    Returns:
+        Настроенный экземпляр Raito
+    """
     config = get_config()
+
+    # Определяем путь к БД для raito
     db_path = config.database_url.replace("sqlite+aiosqlite:///", "")
+
+    # Storage для raito
     raito_storage = RaitoSQLiteStorage(f"sqlite+aiosqlite:///{db_path}")
 
+    # Role Manager
     role_manager = RoleManager(
         SQLiteRoleProvider(raito_storage),
         developers=config.developers
     )
 
+    # Создаём Raito с указанием директории роутеров
     raito = Raito(
         dispatcher=dp,
+        routers_dir="app/bot/handlers",  # Указываем директорию с роутерами
         developers=config.developers,
         configuration=RaitoConfiguration(role_manager=role_manager),
-        routers_dir="app/bot/handlers",
     )
 
-    # Сохраняем глобально
-    global RAITO_INSTANCE
-    RAITO_INSTANCE = raito
+    # Сохраняем raito в контекстных данных диспетчера
+    dp["raito"] = raito
 
     await raito.setup()
 
     logger.info(f"✅ Raito настроен. Разработчики: {config.developers}")
+
     return raito
 
 
