@@ -1,94 +1,43 @@
-"""Обработчик капчи."""
-
 from aiogram import Router, F
 from aiogram.types import CallbackQuery
+from aiogram.exceptions import TelegramBadRequest
 
 from app.core import get_logger
-from app.database import get_session
-from app.services.captcha import (
-    verify_captcha_answer,
-    handle_captcha_failure,
-    send_welcome_after_captcha
-)
+from app.services.captcha import handle_captcha_callback
 
 logger = get_logger(__name__)
-router = Router(name="captcha_router")
-
-# Хранилище попыток пользователей (в production лучше использовать Redis)
-user_attempts: dict[int, int] = {}
+router = Router()
 
 
 @router.callback_query(F.data.startswith("captcha:"))
-async def handle_captcha_callback(callback: CallbackQuery) -> None:
+async def process_captcha_callback(callback: CallbackQuery):
     """
-    Обработка ответа на капчу.
+    Обработка callback от inline-кнопки капчи.
 
-    Формат callback_data: captcha:user_id:выбранный_emoji:правильный_emoji
+    Callback data формат: captcha:user_id:emoji:правильный_ответ
     """
-    await callback.answer()
+    user_id = callback.from_user.id
+
+    logger.info(f"[id{user_id}] Callback капчи: {callback.data}")
 
     try:
-        # Парсим callback_data
-        _, str_user_id, user_answer, correct_answer = callback.data.split(":")
-        user_id = int(str_user_id)
+        # Обрабатываем капчу через сервис
+        is_correct = await handle_captcha_callback(
+            bot=callback.bot,
+            callback_data=callback.data,
+            user_id=user_id
+        )
 
-        # Проверяем, что это именно тот пользователь
-        if user_id != callback.from_user.id:
-            await callback.answer("❌ Эта капча предназначена не для вас", show_alert=True)
-            return
-
-        # Получаем количество попыток
-        attempts = user_attempts.get(user_id, 0) + 1
-        user_attempts[user_id] = attempts
-
-        # Удаляем сообщение с капчей
-        try:
-            await callback.message.delete()
-        except Exception as e:
-            logger.warning(f"[id{user_id}] Не удалось удалить сообщение с капчей: {e}")
-
-        # Проверяем ответ
-        async for session in get_session():
-            is_correct = await verify_captcha_answer(
-                session=session,
-                user_id=user_id,
-                chat_id=callback.message.chat.id,
-                user_answer=user_answer,
-                correct_answer=correct_answer,
-                attempts_count=attempts
-            )
-
+        # Удаляем inline-клавиатуру после ответа
         if is_correct:
-            # Правильный ответ!
-            await callback.message.answer(
-                "✅ <b>Правильно!</b>\n\n"
-                "Вы успешно прошли проверку безопасности."
-            )
+            try:
+                await callback.message.edit_reply_markup(reply_markup=None)
+            except TelegramBadRequest:
+                # Если не удалось изменить сообщение, просто игнорируем
+                pass
 
-            # Отправляем приветствие
-            await send_welcome_after_captcha(callback.bot, user_id)
+        await callback.answer()
 
-            # Очищаем попытки
-            user_attempts.pop(user_id, None)
-
-            logger.info(f"[id{user_id}] Капча пройдена успешно")
-
-        else:
-            # Неправильный ответ
-            await handle_captcha_failure(
-                bot=callback.bot,
-                user_id=user_id,
-                chat_id=callback.message.chat.id,
-                attempts=attempts
-            )
-
-    except ValueError as e:
-        logger.error(f"Ошибка парсинга callback_data: {e}")
-        await callback.message.answer(
-            "❌ Произошла ошибка обработки ответа. Попробуйте ещё раз."
-        )
     except Exception as e:
-        logger.error(f"Ошибка обработки капчи: {e}", exc_info=True)
-        await callback.message.answer(
-            "❌ Произошла ошибка. Попробуйте ещё раз или обратитесь к администратору."
-        )
+        logger.error(f"[id{user_id}] Ошибка обработки callback капчи: {e}")
+        await callback.answer("❌ Ошибка обработки", show_alert=False)

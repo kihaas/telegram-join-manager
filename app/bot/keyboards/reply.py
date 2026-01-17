@@ -15,19 +15,13 @@ def get_admin_reply_menu() -> ReplyKeyboardMarkup:
         KeyboardButton(text="📋 Заявки")
     )
     builder.row(
-        KeyboardButton(text="⚙️ Настройки")
+        KeyboardButton(text="🏠 Главное меню")
     )
 
     return builder.as_markup(resize_keyboard=True)
 
 
 def get_captcha_keyboard(variants: list[str]) -> ReplyKeyboardMarkup:
-    """
-    Клавиатура для капчи (смайлики или варианты ответов).
-
-    Args:
-        variants: Список вариантов (например, ["🔑", "🥺", "👱🏾‍♀️", "🤖"])
-    """
     builder = ReplyKeyboardBuilder()
 
     # Располагаем кнопки в 2 ряда по 2

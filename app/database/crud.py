@@ -53,11 +53,26 @@ async def get_users_count(session: AsyncSession) -> int:
 
 async def get_new_users_count(session: AsyncSession, days: int = 1) -> int:
     """Количество новых пользователей за N дней."""
-    target_date = (datetime.now() - timedelta(days=days)).strftime("%d.%m.%Y")
-    result = await session.execute(
-        select(func.count(User.id)).where(User.registration_date >= target_date)
-    )
-    return result.scalar() or 0
+    from datetime import datetime, timedelta
+
+    # Вычисляем дату N дней назад
+    cutoff_date = datetime.now() - timedelta(days=days)
+
+    # Получаем всех пользователей и фильтруем по дате
+    result = await session.execute(select(User))
+    users = result.scalars().all()
+
+    count = 0
+    for user in users:
+        try:
+            # Парсим дату формата DD.MM.YYYY
+            user_date = datetime.strptime(user.registration_date, "%d.%m.%Y")
+            if user_date >= cutoff_date:
+                count += 1
+        except (ValueError, AttributeError):
+            continue
+
+    return count
 
 
 # ==================== ADMIN SETTINGS ====================

@@ -11,6 +11,19 @@ logger = get_logger(__name__)
 router = Router()
 
 
+@router.message(F.text.in_(["🏠 Главное меню", "⚙️ Настройки"]), DEVELOPER | OWNER | ADMINISTRATOR)
+async def main_menu_button(message: Message, state: FSMContext) -> None:
+    """Кнопка главного меню."""
+    await state.clear()
+
+    await message.answer(
+        "🤖 <b>Панель управления</b>\n\n"
+        "Выберите раздел:",
+        reply_markup=get_admin_main_menu()
+    )
+    """Админ-меню и основные команды."""
+
+
 @router.message(Command("start"), DEVELOPER | OWNER | ADMINISTRATOR)
 async def cmd_start(message: Message, state: FSMContext) -> None:
     """Команда /start для админов."""
@@ -56,7 +69,6 @@ async def show_statistics(event: Message | CallbackQuery) -> None:
         new_month = await crud.get_new_users_count(session, days=30)
 
         pending_count = await crud.get_pending_count(session)
-        captcha_success = await crud.get_captcha_success_rate(session)
 
     text = (
         "📊 <b>Статистика бота</b>\n\n"
@@ -64,14 +76,15 @@ async def show_statistics(event: Message | CallbackQuery) -> None:
         f"├ За сегодня: <code>{new_today}</code>\n"
         f"├ За неделю: <code>{new_week}</code>\n"
         f"└ За месяц: <code>{new_month}</code>\n\n"
-        f"📋 В очереди: <code>{pending_count}</code>\n"
-        f"✅ Капча пройдена: <code>{captcha_success:.1f}%</code>"
+        f"📋 В очереди: <code>{pending_count}</code>"
     )
 
+    from app.bot.keyboards import get_back_to_menu
+
     if isinstance(event, Message):
-        await event.answer(text)
+        await event.answer(text, reply_markup=get_back_to_menu())
     else:
-        await event.message.edit_text(text, reply_markup=get_admin_main_menu())
+        await event.message.edit_text(text, reply_markup=get_back_to_menu())
         await event.answer()
 
 

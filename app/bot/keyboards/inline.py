@@ -11,7 +11,7 @@ def get_admin_main_menu() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="📩 Рассылка", callback_data="admin:broadcast")
     )
     builder.row(
-        InlineKeyboardButton(text="✉️ Приветствие", callback_data="admin:welcome"),
+        InlineKeyboardButton(text="✉️ Приветствие", callback_data="admin:welcome.py"),
         InlineKeyboardButton(text="📋 Заявки", callback_data="admin:requests")
     )
     builder.row(
@@ -166,7 +166,7 @@ def get_requests_filters() -> InlineKeyboardMarkup:
 def get_welcome_agree() -> InlineKeyboardMarkup:
     """Кнопка согласия с правилами."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Я прочитал(а) правила", callback_data="welcome:agree")]
+        [InlineKeyboardButton(text="✅ Я прочитал(а) правила", callback_data="welcome.py:agree")]
     ])
 
 
