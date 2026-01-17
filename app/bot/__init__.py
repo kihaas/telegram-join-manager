@@ -11,8 +11,8 @@ from raito.plugins.roles.providers.sql.sqlite import SQLiteRoleProvider
 from raito.utils.storages.sql.sqlite import SQLiteStorage as RaitoSQLiteStorage
 
 from app.core import get_config, get_logger
-from .handlers import main_router
-from .middlewares import LoggingMiddleware, ThrottlingMiddleware
+from app.bot.handlers import main_router
+from app.bot.middlewares import LoggingMiddleware, ThrottlingMiddleware
 
 logger = get_logger(__name__)
 
