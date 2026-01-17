@@ -1,3 +1,5 @@
+"""Управление приветственным сообщением."""
+
 import json
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
@@ -102,39 +104,39 @@ async def process_welcome_content(message: Message, state: FSMContext) -> None:
     # Парсим кнопки
     buttons_json = "[]"
     clean_text = text
+    buttons = []  # Инициализируем сразу
+    markup = None
 
     from app.bot.keyboards import parse_buttons_from_text
-    markup = parse_buttons_from_text(text)
+    import re
 
-    if markup:
-        # Есть кнопки - извлекаем их
-        import re
-        pattern = re.compile(r'(.+?)\s*-\s*(https?://\S+|[a-zA-Z0-9.-]+\.[a-z]{2,})')
+    pattern = re.compile(r'(.+?)\s*-\s*(https?://\S+|[a-zA-Z0-9.-]+\.[a-z]{2,})')
 
-        buttons = []
-        lines = text.split('\n')
-        clean_lines = []
+    lines = text.split('\n')
+    clean_lines = []
 
-        for line in lines:
-            matches = pattern.findall(line)
-            if matches:
-                # Это строка с кнопками
-                row = [{"text": m[0].strip(), "url": m[1].strip()} for m in matches]
-                buttons.append(row)
-            else:
-                # Обычная строка текста
-                clean_lines.append(line)
+    for line in lines:
+        matches = pattern.findall(line)
+        if matches:
+            # Это строка с кнопками
+            row = [{"text": m[0].strip(), "url": m[1].strip()} for m in matches]
+            buttons.append(row)
+        else:
+            # Обычная строка текста
+            clean_lines.append(line)
 
+    if buttons:
         clean_text = '\n'.join(clean_lines).strip()
         buttons_json = json.dumps(buttons, ensure_ascii=False)
+        markup = parse_buttons_from_text(text)
 
-    # Сохраняем в БД
+    # Сохраняем в БД (полная замена, обнуляем всё)
     async for session in get_session():
         await crud.update_admin_settings(
             session,
             settings_id=2,
             applications=clean_text,
-            photo=photo_id,
+            photo=photo_id,  # None если нет медиа
             buttons=buttons_json
         )
 
@@ -142,7 +144,7 @@ async def process_welcome_content(message: Message, state: FSMContext) -> None:
 
     # Показываем превью
     preview_text = (
-        "✅ <b>Приветствие обновлено!</b>\n\n"
+        "✅ <b>Приветствие успешно обновлено!</b>\n\n"
         "<b>Превью:</b>\n"
         f"{clean_text}\n\n"
     )
@@ -158,7 +160,8 @@ async def process_welcome_content(message: Message, state: FSMContext) -> None:
     await state.clear()
 
     # Возврат в меню
+    from app.bot.keyboards import get_admin_main_menu
     await message.answer(
-        "Выберите раздел:",
-        reply_markup=get_back_to_menu()
+        "🤖 <b>Панель управления</b>\n\nВыберите раздел:",
+        reply_markup=get_admin_main_menu()
     )

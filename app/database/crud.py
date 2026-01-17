@@ -1,3 +1,5 @@
+"""CRUD операции для всех моделей."""
+
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -102,6 +104,8 @@ async def update_admin_settings(
         settings.applications = applications
     if photo is not None:
         settings.photo = photo
+    elif photo == "":  # Явное обнуление
+        settings.photo = None
     if buttons is not None:
         settings.buttons = buttons
 
@@ -138,7 +142,7 @@ async def get_pending_requests(
         offset: int = 0,
         order_by: str = "desc"  # "asc" or "desc"
 ) -> List[PendingRequest]:
-    """Получить список заявок с фильтрами и пагинацией."""
+    """Получить список заявок с фильтрами и пагинацией.""" #исправить уброать фильтры
     query = select(PendingRequest)
 
     if status:
@@ -204,24 +208,6 @@ async def bulk_update_requests(
 
 # ==================== CAPTCHA VARIANTS ====================
 
-async def create_captcha_variant(
-        session: AsyncSession,
-        captcha_type: CaptchaType,
-        content: str,
-        is_correct: bool = False,
-        group_id: Optional[int] = None
-) -> CaptchaVariant:
-    """Создать вариант капчи."""
-    variant = CaptchaVariant(
-        type=captcha_type,
-        content=content,
-        is_correct=is_correct,
-        group_id=group_id
-    )
-    session.add(variant)
-    await session.flush()
-    return variant
-
 
 async def get_random_captcha_variants(
         session: AsyncSession,
@@ -240,35 +226,6 @@ async def get_random_captcha_variants(
 
 # ==================== BROADCAST DRAFTS ====================
 
-async def create_broadcast_draft(
-        session: AsyncSession,
-        creator_id: int,
-        text: Optional[str] = None,
-        media_id: Optional[str] = None,
-        buttons: str = "[]"
-) -> BroadcastDraft:
-    """Создать черновик рассылки."""
-    draft = BroadcastDraft(
-        text=text,
-        media_id=media_id,
-        buttons=buttons,
-        creator_id=creator_id,
-        status=BroadcastStatus.DRAFT
-    )
-    session.add(draft)
-    await session.flush()
-    return draft
-
-
-async def get_broadcast_drafts(session: AsyncSession, creator_id: Optional[int] = None) -> List[BroadcastDraft]:
-    """Получить черновики рассылок."""
-    query = select(BroadcastDraft).order_by(BroadcastDraft.created_at.desc())
-    if creator_id:
-        query = query.where(BroadcastDraft.creator_id == creator_id)
-
-    result = await session.execute(query)
-    return list(result.scalars().all())
-
 
 async def update_broadcast_status(
         session: AsyncSession,
@@ -286,35 +243,6 @@ async def update_broadcast_status(
         await session.flush()
     return draft
 
-
-# ==================== WELCOME VARIANTS ====================
-
-async def get_active_welcome_variants(session: AsyncSession) -> List[WelcomeVariant]:
-    """Получить активные варианты приветствий."""
-    result = await session.execute(
-        select(WelcomeVariant)
-        .where(WelcomeVariant.is_active == True)
-        .order_by(WelcomeVariant.created_at.desc())
-    )
-    return list(result.scalars().all())
-
-
-async def increment_welcome_views(session: AsyncSession, variant_id: int) -> None:
-    """Увеличить счётчик просмотров приветствия."""
-    await session.execute(
-        update(WelcomeVariant)
-        .where(WelcomeVariant.id == variant_id)
-        .values(views_count=WelcomeVariant.views_count + 1)
-    )
-
-
-async def increment_welcome_agrees(session: AsyncSession, variant_id: int) -> None:
-    """Увеличить счётчик согласий с правилами."""
-    await session.execute(
-        update(WelcomeVariant)
-        .where(WelcomeVariant.id == variant_id)
-        .values(agrees_count=WelcomeVariant.agrees_count + 1)
-    )
 
 
 # ==================== CAPTCHA ATTEMPTS ====================
@@ -340,18 +268,3 @@ async def create_captcha_attempt(
     return attempt
 
 
-async def get_captcha_success_rate(session: AsyncSession) -> float:
-    """Процент успешного прохождения капчи."""
-    total = await session.execute(select(func.count(CaptchaAttempt.id)))
-    total_count = total.scalar() or 0
-
-    if total_count == 0:
-        return 0.0
-
-    successful = await session.execute(
-        select(func.count(CaptchaAttempt.id))
-        .where(CaptchaAttempt.is_successful == True)
-    )
-    successful_count = successful.scalar() or 0
-
-    return (successful_count / total_count) * 100

@@ -2,6 +2,7 @@ from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
+from raito import Raito
 from raito.plugins.roles import DEVELOPER, OWNER, ADMINISTRATOR
 
 from app.bot.keyboards import get_admin_main_menu, get_admin_reply_menu
@@ -25,7 +26,7 @@ async def main_menu_button(message: Message, state: FSMContext) -> None:
 
 
 @router.message(Command("start"), DEVELOPER | OWNER | ADMINISTRATOR)
-async def cmd_start(message: Message, state: FSMContext) -> None:
+async def cmd_start_admin(message: Message, state: FSMContext) -> None:
     """Команда /start для админов."""
     await state.clear()
 
@@ -39,6 +40,15 @@ async def cmd_start(message: Message, state: FSMContext) -> None:
     await message.answer(
         "Меню:",
         reply_markup=get_admin_reply_menu()
+    )
+
+
+@router.message(Command("start"))
+async def cmd_start_user(message: Message) -> None:
+    """Команда /start для обычных пользователей."""
+    await message.answer(
+        "👋 Привет!\n\n"
+        "Чтобы вступить в группу, отправьте заявку через кнопку вступления."
     )
 
 
@@ -89,11 +99,8 @@ async def show_statistics(event: Message | CallbackQuery) -> None:
 
 
 @router.message(Command("ban"), DEVELOPER | OWNER | ADMINISTRATOR)
-async def cmd_ban(message: Message) -> None:
+async def cmd_ban(message: Message, raito: Raito) -> None:
     """Забанить пользователя через raito."""
-    from raito import Raito
-    from aiogram import Bot
-
     # Парсим аргументы
     args = message.text.split(maxsplit=1)
     if len(args) < 2 or not args[1].isdigit():
@@ -101,49 +108,36 @@ async def cmd_ban(message: Message) -> None:
         return
 
     user_id = int(args[1])
-    bot: Bot = message.bot
-    raito: Raito = message.bot.get("raito")
 
     # Назначаем роль "tester" (забаненный)
-    await raito.role_manager.assign_role(bot.id, message.from_user.id, user_id, "tester")
+    await raito.role_manager.assign_role(message.bot.id, message.from_user.id, user_id, "tester")
 
     await message.answer(f"✅ Пользователь <code>{user_id}</code> забанен")
     logger.info(f"[id{message.from_user.id}] Забанил пользователя {user_id}")
 
 
 @router.message(Command("unban"), DEVELOPER | OWNER | ADMINISTRATOR)
-async def cmd_unban(message: Message) -> None:
+async def cmd_unban(message: Message, raito: Raito) -> None:
     """Разбанить пользователя."""
-    from raito import Raito
-    from aiogram import Bot
-
     args = message.text.split(maxsplit=1)
     if len(args) < 2 or not args[1].isdigit():
         await message.answer("❌ Использование: /unban <user_id>")
         return
 
     user_id = int(args[1])
-    bot: Bot = message.bot
-    raito: Raito = message.bot.get("raito")
 
     # Убираем роль
-    await raito.role_manager.revoke_role(bot.id, message.from_user.id, user_id)
+    await raito.role_manager.revoke_role(message.bot.id, message.from_user.id, user_id)
 
     await message.answer(f"✅ Пользователь <code>{user_id}</code> разбанен")
     logger.info(f"[id{message.from_user.id}] Разбанил пользователя {user_id}")
 
 
 @router.message(Command("banlist"), DEVELOPER | OWNER | ADMINISTRATOR)
-async def cmd_banlist(message: Message) -> None:
+async def cmd_banlist(message: Message, raito: Raito) -> None:
     """Список забаненных пользователей."""
-    from raito import Raito
-    from aiogram import Bot
-
-    bot: Bot = message.bot
-    raito: Raito = message.bot.get("raito")
-
     # Получаем всех с ролью "tester"
-    banned_users = await raito.role_manager.get_users(bot.id, "tester")
+    banned_users = await raito.role_manager.get_users(message.bot.id, "tester")
 
     if not banned_users:
         await message.answer("✅ Нет забаненных пользователей")

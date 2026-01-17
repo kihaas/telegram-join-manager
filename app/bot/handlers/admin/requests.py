@@ -1,6 +1,9 @@
+"""Управление заявками."""
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.exceptions import TelegramBadRequest
+from raito import Raito
 from raito.plugins.roles import DEVELOPER, OWNER, ADMINISTRATOR
 
 from app.core import get_logger
@@ -266,7 +269,7 @@ async def decline_request(callback: CallbackQuery) -> None:
 
 
 @router.callback_query(F.data.startswith("requests:ban:"), DEVELOPER | OWNER | ADMINISTRATOR)
-async def ban_request(callback: CallbackQuery) -> None:
+async def ban_request(callback: CallbackQuery, raito: Raito) -> None:
     """Отклонить заявку + бан."""
     request_id = int(callback.data.split(":")[2])
 
@@ -286,8 +289,6 @@ async def ban_request(callback: CallbackQuery) -> None:
         )
 
         # Баним через Raito
-        from raito import Raito
-        raito: Raito = callback.bot.get("raito")
         await raito.role_manager.assign_role(
             callback.bot.id,
             callback.from_user.id,

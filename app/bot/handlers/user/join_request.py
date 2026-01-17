@@ -1,7 +1,10 @@
+"""Обработка заявок на вступление в группу."""
+
 import asyncio
 from aiogram import Router
 from aiogram.types import ChatJoinRequest
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from raito import Raito
 
 from app.core import get_logger, get_config
 from app.database import get_session, crud
@@ -11,13 +14,13 @@ router = Router()
 
 
 @router.chat_join_request()
-async def handle_join_request(update: ChatJoinRequest) -> None:
+async def handle_join_request(update: ChatJoinRequest, raito: Raito) -> None:
     """
     Обработка новой заявки на вступление.
 
     Последовательность по ТЗ:
     1. Отправить приветственное сообщение
-    2. Отправить капчу (через 5 секунд после приветствия)
+    2. Отправить капчу (через 3 секунды после приветствия)
     3. После прохождения капчи:
        - Если автоприём ВКЛ → одобрить заявку
        - Если автоприём ВЫКЛ → добавить в очередь
@@ -28,8 +31,6 @@ async def handle_join_request(update: ChatJoinRequest) -> None:
     logger.info(f"[id{user.id}] Новая заявка от @{user.username or 'NoUsername'}")
 
     # Проверяем, не забанен ли пользователь
-    from raito import Raito
-    raito: Raito = update.bot.get("raito")
     user_role = await raito.role_manager.get_role(update.bot.id, user.id)
 
     if user_role == "tester":
@@ -58,8 +59,8 @@ async def handle_join_request(update: ChatJoinRequest) -> None:
             pass
         return
 
-    # ШАГ 2: Ждём 5 секунд и отправляем капчу
-    await asyncio.sleep(5)
+    # ШАГ 2: Ждём 10 секунд и отправляем капчу
+    await asyncio.sleep(3)
 
     if config.captcha_enabled:
         captcha_sent = await send_captcha(update)

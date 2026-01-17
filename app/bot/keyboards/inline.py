@@ -11,11 +11,8 @@ def get_admin_main_menu() -> InlineKeyboardMarkup:
         InlineKeyboardButton(text="📩 Рассылка", callback_data="admin:broadcast")
     )
     builder.row(
-        InlineKeyboardButton(text="✉️ Приветствие", callback_data="admin:welcome.py"),
+        InlineKeyboardButton(text="✉️ Приветствие", callback_data="admin:welcome"),
         InlineKeyboardButton(text="📋 Заявки", callback_data="admin:requests")
-    )
-    builder.row(
-        InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin:settings")
     )
 
     return builder.as_markup()
@@ -54,7 +51,6 @@ def get_broadcast_controls(draft_id: int) -> InlineKeyboardMarkup:
 
     builder.row(
         InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"broadcast:edit:{draft_id}"),
-        InlineKeyboardButton(text="🧪 Тест", callback_data=f"broadcast:test:{draft_id}")
     )
     builder.row(
         InlineKeyboardButton(text="✅ Запустить", callback_data=f"broadcast:send:{draft_id}"),
@@ -81,18 +77,6 @@ def get_confirm_buttons(action: str, data: str = "") -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(text="✅ Да", callback_data=f"confirm:{action}:{data}"),
         InlineKeyboardButton(text="❌ Нет", callback_data=f"cancel:{action}")
-    )
-
-    return builder.as_markup()
-
-
-def get_add_buttons_keyboard() -> InlineKeyboardMarkup:
-    """Предложение добавить кнопки."""
-    builder = InlineKeyboardBuilder()
-
-    builder.row(
-        InlineKeyboardButton(text="➕ Добавить кнопки", callback_data="buttons:add"),
-        InlineKeyboardButton(text="➡️ Продолжить без кнопок", callback_data="buttons:skip")
     )
 
     return builder.as_markup()
@@ -135,39 +119,12 @@ def get_requests_pagination(current_page: int, total_pages: int) -> InlineKeyboa
 
     builder.row(
         InlineKeyboardButton(text="🔄 Обновить", callback_data="requests:refresh"),
-        InlineKeyboardButton(text="⚙️ Фильтры", callback_data="requests:filters")
     )
     builder.row(
         InlineKeyboardButton(text="🔙 Главное меню", callback_data="admin:menu")
     )
 
     return builder.as_markup()
-
-
-def get_requests_filters() -> InlineKeyboardMarkup:
-    """Фильтры для заявок."""
-    builder = InlineKeyboardBuilder()
-
-    builder.row(
-        InlineKeyboardButton(text="🆕 Новые", callback_data="requests:filter:new"),
-        InlineKeyboardButton(text="⏰ Старые", callback_data="requests:filter:old")
-    )
-    builder.row(
-        InlineKeyboardButton(text="📅 За сутки", callback_data="requests:filter:day"),
-        InlineKeyboardButton(text="📆 За неделю", callback_data="requests:filter:week")
-    )
-    builder.row(
-        InlineKeyboardButton(text="🔙 Назад", callback_data="admin:requests")
-    )
-
-    return builder.as_markup()
-
-
-def get_welcome_agree() -> InlineKeyboardMarkup:
-    """Кнопка согласия с правилами."""
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Я прочитал(а) правила", callback_data="welcome.py:agree")]
-    ])
 
 
 def parse_buttons_from_text(text: str) -> InlineKeyboardMarkup | None:
