@@ -3,7 +3,7 @@ from aiogram import Router
 from app.bot.handlers.admin.commands.menu import router as menu_router
 from app.bot.handlers.admin.commands.requests import router as requests_router
 from app.bot.handlers.admin.commands.welcome import router as welcome_router
-from app.services.broadcast import router as broudcast_router
+from app.bot.handlers.admin.commands.broadcast import router as broudcast_router
 
 # Главный роутер для пользователей
 admin_router = Router()

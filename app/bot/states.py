@@ -2,11 +2,10 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class BroadcastStates(StatesGroup):
-    """Состояния для создания рассылки."""
-
-    waiting_content = State()  # Ожидание текста/медиа
-    preview = State()  # Предпросмотр
-    confirm = State()  # Подтверждение отправки
+    waiting_content = State()
+    preview = State()
+    confirm = State()
+    running = State()
 
 
 class WelcomeStates(StatesGroup):
