@@ -136,3 +136,125 @@ async def send_captcha_to_user(bot, user_id: int) -> bool:
     except Exception as e:
         logger.error(f"[id{user_id}] Ошибка отправки капчи: {e}")
         return False
+
+
+def build_captcha_keyboard(variants: List[str], user_id: int, correct_answer: str) -> InlineKeyboardMarkup:
+    """
+    Создать inline-клавиатуру с вариантами капчи.
+    """
+    builder = InlineKeyboardBuilder()
+
+    # Создаём кнопки по 2 в ряд
+    for i in range(0, len(variants), 2):
+        row_variants = variants[i:i + 2]
+        buttons = []
+
+        for emoji in row_variants:
+            callback_data = f"captcha:{user_id}:{emoji}:{correct_answer}"
+            buttons.append(InlineKeyboardButton(text=emoji, callback_data=callback_data))
+
+        builder.row(*buttons)
+
+    # Добавляем кнопку "Обновить капчу" (если нужно)
+    builder.row(
+        InlineKeyboardButton(
+            text="🔄 Обновить капчу",
+            callback_data=f"captcha_resend:{user_id}"
+        )
+    )
+
+    return builder.as_markup()
+
+
+async def send_captcha_to_user(bot, user_id: int) -> bool:
+    """
+    Отправить капчу пользователю.
+    """
+    try:
+        # Получаем случайную капчу
+        image_path, correct_answer, variants = get_random_captcha()
+
+        # Проверяем существование файла
+        if not image_path.exists():
+            logger.error(f"Файл капчи не найден: {image_path}")
+            image_path = None
+
+        # Пытаемся сохранить в Redis, но если недоступен - продолжаем
+        config = get_config()
+        redis = None
+        try:
+            redis = Redis.from_url(config.redis_url, decode_responses=True)
+            await redis.setex(f"captcha:{user_id}", 300, correct_answer)
+            await redis.setex(f"captcha_attempts:{user_id}", 300, "0")
+            logger.debug(f"[id{user_id}] Ответ сохранён в Redis: {correct_answer}")
+        except Exception as e:
+            logger.warning(f"[id{user_id}] Redis недоступен, работаем без него: {e}")
+            # Сохраняем в памяти как fallback
+            global in_memory_captcha_store
+            if 'in_memory_captcha_store' not in globals():
+                in_memory_captcha_store = {}
+            in_memory_captcha_store[user_id] = {
+                'answer': correct_answer,
+                'attempts': 0,
+                'timestamp': datetime.now()
+            }
+        finally:
+            if redis:
+                await redis.close()
+
+        # Создаём клавиатуру (без correct_answer в callback_data для безопасности)
+        keyboard = build_captcha_keyboard(variants, user_id)
+
+        # Текст капчи
+        caption = (
+            "🔐 <b>Проверка безопасности</b>\n\n"
+            "Выберите эмодзи, которое изображено на картинке:\n\n"
+            "⚠️ У вас есть <b>3 попытки</b>\n"
+            "⚠️ <i>При ответе вы соглашаетесь на получение сообщений от бота</i>"
+        )
+
+        # Отправляем капчу
+        if image_path:
+            photo = FSInputFile(image_path)
+            await bot.send_photo(
+                chat_id=user_id,
+                photo=photo,
+                caption=caption,
+                reply_markup=keyboard
+            )
+        else:
+            # Без картинки
+            await bot.send_message(
+                chat_id=user_id,
+                text=caption,
+                reply_markup=keyboard
+            )
+
+        logger.info(f"[id{user_id}] Капча отправлена: {correct_answer}")
+        return True
+
+    except Exception as e:
+        logger.error(f"[id{user_id}] Ошибка отправки капчи: {e}")
+        return False
+
+
+def build_captcha_keyboard(variants: List[str], user_id: int) -> InlineKeyboardMarkup:
+    """
+    Создать inline-клавиатуру с вариантами капчи.
+    Без передачи правильного ответа в callback_data.
+    """
+    builder = InlineKeyboardBuilder()
+
+    # Создаём кнопки по 2 в ряд
+    for i in range(0, len(variants), 2):
+        row_variants = variants[i:i + 2]
+        buttons = []
+
+        for emoji in row_variants:
+            # Только user_id и выбранный emoji
+            callback_data = f"captcha:{user_id}:{emoji}"
+            buttons.append(InlineKeyboardButton(text=emoji, callback_data=callback_data))
+
+        builder.row(*buttons)
+
+    return builder.as_markup()

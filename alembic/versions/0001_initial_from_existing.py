@@ -7,8 +7,9 @@ Create Date: 2026-01-17 17:30:00.000000
 """
 from typing import Sequence, Union
 
-from alembic import op  # type: ignore
+from alembic import op
 import sqlalchemy as sa
+
 
 # revision identifiers, used by Alembic.
 revision: str = '0001'
@@ -19,10 +20,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """
-    Создаём новые таблицы для расширенного функционала.
+    Создаём только нужные таблицы.
 
     Таблицы users и admin уже существуют в старой БД,
-    поэтому мы их НЕ создаём заново, а только добавляем новые таблицы.
+    поэтому мы их НЕ создаём заново.
     """
 
     # === Таблица заявок на вступление ===
@@ -44,7 +45,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_pending_requests_status'), 'pending_requests', ['status'])
     op.create_index(op.f('ix_pending_requests_user_id'), 'pending_requests', ['user_id'])
 
-    # === Таблица попыток капчи ===
+    # === Таблица попыток капчи (только EMOJI тип) ===
     op.create_table(
         'captcha_attempts',
         sa.Column('id', sa.Integer(), nullable=False),

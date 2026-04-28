@@ -148,3 +148,5 @@ async def cmd_banlist(message: Message, raito: Raito) -> None:
         text += f"├ <code>{user_id}</code>\n"
 
     await message.answer(text)
+
+

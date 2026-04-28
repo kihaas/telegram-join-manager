@@ -14,6 +14,7 @@ from .models import (
     CaptchaType,
     CaptchaAttempt
 )
+from ..core import get_logger
 
 
 # ==================== USERS ====================
@@ -50,25 +51,80 @@ async def get_users_count(session: AsyncSession) -> int:
 
 
 async def get_new_users_count(session: AsyncSession, days: int = 1) -> int:
-    """Количество новых пользователей за N дней."""
+    """Количество новых пользователей за N дней (правильная версия)."""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, text
+
     # Вычисляем дату N дней назад
     cutoff_date = datetime.now() - timedelta(days=days)
+    # Приводим к началу дня
+    cutoff_date = cutoff_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # Получаем всех пользователей и фильтруем по дате
-    result = await session.execute(select(User))
-    users = result.scalars().all()
+    # Отладочная информация
+    from app.core import get_logger
+    logger = get_logger(__name__)
+    logger.info(f"[STATS] Запрашиваем за {days} дней, cutoff_date={cutoff_date.strftime('%d.%m.%Y')}")
 
-    count = 0
-    for user in users:
-        try:
-            # Парсим дату формата DD.MM.YYYY
-            user_date = datetime.strptime(user.registration_date, "%d.%m.%Y")
-            if user_date >= cutoff_date:
-                count += 1
-        except (ValueError, AttributeError):
-            continue
+    try:
+        # ПРАВИЛЬНЫЙ SQL запрос - преобразуем DD.MM.YYYY в дату для сравнения
+        stmt = text("""
+            SELECT COUNT(*) 
+            FROM users 
+            WHERE date(
+                substr(registration_date, 7, 4) || '-' ||
+                substr(registration_date, 4, 2) || '-' ||
+                substr(registration_date, 1, 2)
+            ) >= date(:cutoff)
+        """)
 
-    return count
+        result = await session.execute(
+            stmt,
+            {"cutoff": cutoff_date.strftime('%Y-%m-%d')}
+        )
+        count = result.scalar() or 0
+
+        logger.info(f"[STATS] Найдено {count} пользователей за {days} дней")
+        return count
+
+    except Exception as e:
+        logger.warning(f"[STATS] Ошибка SQL запроса: {e}, использую Python fallback")
+
+        # Fallback на Python
+        result = await session.execute(select(User))
+        users = result.scalars().all()
+
+        count = 0
+        for user in users:
+            try:
+                user_date = datetime.strptime(user.registration_date, "%d.%m.%Y")
+                if user_date >= cutoff_date:
+                    count += 1
+            except (ValueError, AttributeError):
+                continue
+
+        logger.info(f"[STATS] Fallback: {count} пользователей за {days} дней")
+        return count
+
+
+    except Exception as e:
+        # Fallback - точный подсчёт
+        from app.core import get_logger
+        logger = get_logger(__name__)
+        logger.warning(f"Ошибка оптимизированного запроса: {e}")
+
+        result = await session.execute(select(User))
+        users = result.scalars().all()
+
+        count = 0
+        for user in users:
+            try:
+                user_date = datetime.strptime(user.registration_date, "%d.%m.%Y")
+                if user_date >= cutoff_date:
+                    count += 1
+            except (ValueError, AttributeError):
+                continue
+
+        return count
 
 
 # ==================== ADMIN SETTINGS ====================

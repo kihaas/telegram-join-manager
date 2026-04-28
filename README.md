@@ -207,3 +207,12 @@ Made with 💜 by kihaas
 - [Документация aiogram](https://docs.aiogram.dev/)
 - [SQLAlchemy Docs](https://docs.sqlalchemy.org/)
 - [Raito GitHub](https://github.com/Aidenable/Raito)
+
+## Демонстрация
+
+![img1.png](imgs/img1.png)
+![img2.png](imgs/img2.png)
+![img3.png](imgs/img3.png)
+![img4.png](imgs/img4.png)
+![img5.png](imgs/img5.png)
+![img6.png](imgs/img6.png)

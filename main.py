@@ -50,21 +50,25 @@ async def main() -> None:
         logger.error(f"❌ Ошибка инициализации БД: {e}")
         sys.exit(1)
 
-    # # 4. Проверка и применение миграций
-    # logger.info("🔄 Проверка миграций Alembic...")
+    # # 3. Инициализация базы данных
+    # from app.database import init_db, close_db
     # try:
-    #     from alembic.config import Config as AlembicConfig
-    #     from alembic import command
+    #     init_db()
+    #     logger.info("✅ База данных инициализирована")
     #
-    #     alembic_cfg = AlembicConfig("alembic.ini")
-    #     command.upgrade(alembic_cfg, "head")
-    #     logger.info("✅ Миграции применены")
-    # except ImportError as e:
-    #     logger.warning(f"⚠️ Alembic не установлен: {e}")
-    #     logger.info("💡 Установи: pip install alembic")
+    #     # Только проверяем БД, НЕ запускаем миграции автоматически
+    #     from app.database.migrations import get_database_info_sync
+    #     db_info = get_database_info_sync()
+    #     logger.info(f"📊 Таблицы: {', '.join(db_info['tables'])}")
+    #     logger.info(f"👥 Пользователей: {db_info['users_count']}")
+    #     logger.info(f"📅 Диапазон дат: {db_info['oldest_date']} - {db_info['newest_date']}")
     #
+    #     if db_info['today_count'] == db_info['users_count'] and db_info['users_count'] > 0:
+    #         logger.warning("⚠️ ВСЕ пользователи имеют сегодняшнюю дату! Миграция уже была применена.")
     #
-    # logger.info("✅ Инициализация завершена!")
+    # except Exception as e:
+    #     logger.error(f"❌ Ошибка инициализации БД: {e}")
+    #     sys.exit(1)
 
     # 5. Запуск бота
     from app.bot import start_bot
