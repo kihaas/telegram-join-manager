@@ -217,3 +217,4 @@ Made with 💜 by kihaas
 ![img5.png](imgs/img5.png)
 ![img6.png](imgs/img6.png)
 ![img7.jpg](imgs/img7.jpg)
+![img8.jpg](imgs/img8.jpg)
