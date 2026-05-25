@@ -4,6 +4,8 @@ import os
 import random
 from pathlib import Path
 from typing import Tuple, List
+from typing import Dict, Any
+from datetime import datetime
 
 from aiogram.types import FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -15,6 +17,9 @@ logger = get_logger(__name__)
 
 # Путь к капчам
 CAPTCHA_BASE_PATH = Path(os.getenv("CAPTCHA_IMAGE_PATH", "assets/"))
+
+
+_in_memory_captcha_store: Dict[int, Dict[str, Any]] = {}
 
 # 3 фиксированных варианта капчи
 CAPTCHA_VARIANTS = [
@@ -190,10 +195,7 @@ async def send_captcha_to_user(bot, user_id: int) -> bool:
         except Exception as e:
             logger.warning(f"[id{user_id}] Redis недоступен, работаем без него: {e}")
             # Сохраняем в памяти как fallback
-            global in_memory_captcha_store
-            if 'in_memory_captcha_store' not in globals():
-                in_memory_captcha_store = {}
-            in_memory_captcha_store[user_id] = {
+            _in_memory_captcha_store[user_id] = {
                 'answer': correct_answer,
                 'attempts': 0,
                 'timestamp': datetime.now()
